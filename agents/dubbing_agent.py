@@ -3,13 +3,15 @@
 from pathlib import Path
 from google.adk.agents import LlmAgent
 from openai import OpenAI
+from moviepy.editor import AudioFileClip
 
 from . import prompt
 from config.config import DubbingArtistConfig
 
 # Ensure the output folder exists
 Path(DubbingArtistConfig.output_dir).mkdir(parents=True, exist_ok=True)
-
+max_attempts = 3
+attempt = 0
 def generate_tts(prompt: str, file_name: str, instruction: str) -> dict:
     """
     Generates an audio based on a text prompt using TTS model.
@@ -30,8 +32,12 @@ def generate_tts(prompt: str, file_name: str, instruction: str) -> dict:
             input=prompt,
             instructions=instruction,
         ) as response:
-            response.stream_to_file(file_name)
-        # it will create mp3 file as default
+            response.stream_to_file(file_name) 
+            # If the the audio length is less than 30 seconds then return message stating that agent need to generate longer audio
+         # Check audio duration
+        audio_duration = AudioFileClip(file_name).duration
+        if audio_duration < 26 or audio_duration > 31:
+            return {"status": "error", "error_message": "The generated audio is {audio_duration} seconds. Please provide a updated dialogue to satisfy the condition."}
 
         return {"status": "success", "file": file_name}
     except Exception as e:
